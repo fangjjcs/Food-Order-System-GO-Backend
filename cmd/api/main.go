@@ -45,7 +45,7 @@ func main() {
 
 	flag.IntVar(&cfg.port, "port", 4000, "Server Port To Listen On")
 	flag.StringVar(&cfg.env, "env", "development", "Application Environment (development|production)")
-	flag.StringVar(&cfg.db.dsn, "dsn", "postgres://fang@localhost/go_movies?sslmode=disable", "Postgres Connection String")
+	flag.StringVar(&cfg.db.dsn, "dsn", "postgres://fang@localhost/afternoon-tea?sslmode=disable", "Postgres Connection String")
 	flag.StringVar(&cfg.jwt.secret, "jwt-secret", "2dce505d96a53c5768052ee90f3df2055657518dad489160df9913f66042e160", "secret")
 	flag.Parse()
 

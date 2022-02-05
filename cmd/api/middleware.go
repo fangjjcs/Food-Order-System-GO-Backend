@@ -26,15 +26,14 @@ func (app *application) checkToken(next http.Handler) http.Handler {
 		authHeader := r.Header.Get("Authorization")
 
 		headerParts := strings.Split(authHeader, " ")
-		log.Println(headerParts)
 
 		if len(headerParts) != 2 {
-			app.errorJSON(w, errors.New("invalid auth header"), http.StatusBadRequest)
+			app.errorJSON(w, errors.New("invalid auth header"), http.StatusForbidden)
 			return
 		}
 
 		if headerParts[0] != "Bearer" {
-			app.errorJSON(w, errors.New("unauthorized - no bearer"), http.StatusBadRequest)
+			app.errorJSON(w, errors.New("unauthorized - no bearer"), http.StatusForbidden)
 			return
 		}
 

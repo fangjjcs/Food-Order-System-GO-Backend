@@ -57,3 +57,13 @@ type User struct {
 	Email    string
 	Password string
 }
+
+// Create Request
+type CreateRequest struct {
+	Name       string    `json:"name"`
+	Type       string    `json:"type"`
+	Memo       string    `json:"memo"`
+	FileString string    `json:"fileString"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}

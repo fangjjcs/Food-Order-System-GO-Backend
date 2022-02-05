@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"database/sql"
+	"log"
 	"time"
 )
 
@@ -142,4 +143,28 @@ func (m *DBModel) All() ([]*Movie, error) {
 
 	}
 	return movies, nil
+}
+
+func (m *DBModel) Create(request CreateRequest) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	stmt := `insert into menu (name, type, memo, image, created_at, updated_at) 
+		values ($1, $2, $3, $4, $5, $6)
+	`
+	_, err := m.DB.ExecContext(ctx, stmt,
+		request.Name,
+		request.Type,
+		request.Memo,
+		request.FileString,
+		request.CreatedAt,
+		request.UpdatedAt,
+	)
+
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
 }

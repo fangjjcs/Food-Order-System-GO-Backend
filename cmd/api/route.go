@@ -26,6 +26,7 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/test-ok", app.testOK)
 
 	router.POST("/admin/delete-movie", app.wrap(secure.ThenFunc(app.deleteMovie)))
+	router.POST("/create", app.wrap(secure.ThenFunc(app.createMenu)))
 
 	return app.enableCORS(router)
 

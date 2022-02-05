@@ -1,9 +1,12 @@
 package main
 
 import (
+	"backend/models"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -97,9 +100,46 @@ func (app *application) deleteMovie(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// func (app *application) insertMovie(w http.ResponseWriter, r *http.Request) {
-// }
-// func (app *application) updateMovie(w http.ResponseWriter, r *http.Request) {
-// }
-// func (app *application) searchMovie(w http.ResponseWriter, r *http.Request) {
-// }
+type CreateParser struct {
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Memo       string `json:"memo"`
+	FileString string `json:"fileString"`
+}
+
+func (app *application) createMenu(w http.ResponseWriter, r *http.Request) {
+
+	var parser CreateParser
+	err := json.NewDecoder(r.Body).Decode(&parser)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+	var request models.CreateRequest
+	request.Name = parser.Name
+	request.Type = parser.Type
+	request.Memo = parser.Memo
+	request.FileString = parser.FileString
+	request.CreatedAt = time.Now()
+	request.UpdatedAt = time.Now()
+
+	err = app.models.DB.Create(request)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	type jsonResp struct {
+		OK bool `json:"ok"`
+	}
+
+	res := jsonResp{
+		OK: true,
+	}
+
+	err = app.writeJSON(w, http.StatusOK, res, "response")
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+}
