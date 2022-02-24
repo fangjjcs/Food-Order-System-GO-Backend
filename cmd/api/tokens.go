@@ -1,7 +1,6 @@
 package main
 
 import (
-	"backend/models"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,23 +8,20 @@ import (
 	"time"
 
 	"github.com/pascaldekloe/jwt"
-	"golang.org/x/crypto/bcrypt"
 )
 
-var validUser = models.User{
-	ID:       10,
-	Email:    "me@here.com",
-	Password: "$2a$12$YZmO3zxVXaKGXORRDxMleOD8COPtz85eSfuxB3ulSwfZmQ6uNzmE2",
+type Credentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
-type Credentials struct {
-	Username string `json:"email"`
-	Password string `json:"password"`
+type CredentialsEasy struct {
+	Username string `json:"username"`
 }
 
 func (app *application) Signin(w http.ResponseWriter, r *http.Request) {
 
-	var creds Credentials
+	var creds CredentialsEasy
 
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {
@@ -33,16 +29,14 @@ func (app *application) Signin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashedPassword := validUser.Password
-
-	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(creds.Password))
+	user, err := app.models.DB.CheckUserWithNumber(creds.Username)
 	if err != nil {
-		app.errorJSON(w, errors.New("one of username or password is wrong"), http.StatusForbidden)
+		app.errorJSON(w, errors.New("employee number is wrong"), http.StatusForbidden)
 		return
 	}
 
 	var claims jwt.Claims
-	claims.Subject = fmt.Sprint(validUser.ID)
+	claims.Subject = fmt.Sprint(user.ID)
 	claims.Issued = jwt.NewNumericTime(time.Now())
 	claims.NotBefore = jwt.NewNumericTime(time.Now())
 	claims.Expires = jwt.NewNumericTime(time.Now().Add(24 * time.Hour))
@@ -55,6 +49,17 @@ func (app *application) Signin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.writeJSON(w, http.StatusOK, string(jwtBytes), "response")
+	type Response struct {
+		EmployeeID string `json:"employeeId"`
+		Username   string `json:"username"`
+		JWT        string `json:"jwt"`
+	}
+	res := Response{
+		EmployeeID: creds.Username,
+		Username:   user.Username,
+		JWT:        string(jwtBytes),
+	}
+
+	app.writeJSON(w, http.StatusOK, res, "response")
 
 }

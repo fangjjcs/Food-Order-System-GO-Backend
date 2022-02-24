@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"time"
 )
 
 // Models is the wrapper for database
@@ -17,53 +16,37 @@ func NewModels(db *sql.DB) Models {
 	}
 }
 
-// Movie is the type for movies
-type Movie struct {
-	ID          int       `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Year        int       `json:"year"`
-	ReleaseDate time.Time `json:"release_date"`
-	Runtime     int       `json:"runtime"`
-	Rating      int       `json:"rating"`
-	MPAARating  string    `json:"mpaa_rating"`
-	CreatedAt   time.Time `json:"-"`
-	UpdatedAt   time.Time `json:"-"`
-	MovieGenre  []string  `json:"genres"`
-	Poster      string    `json:"poster"`
-}
-
-// Genre is the type for genre
-type Genre struct {
-	ID        int       `json:"-"`
-	GenreName string    `json:"genre_name"`
-	CreatedAt time.Time `json:"-"`
-	UpdatedAt time.Time `json:"-"`
-}
-
-// MovieGenre is the type for movie genre
-type MovieGenre struct {
-	ID        int       `json:"-"`
-	MovieID   int       `json:"-"`
-	GenreID   int       `json:"-"`
-	Genre     Genre     `json:"genre"`
-	CreatedAt time.Time `json:"-"`
-	UpdatedAt time.Time `json:"-"`
-}
-
 // User is the type for users
 type User struct {
-	ID       int
-	Email    string
-	Password string
+	ID         int
+	Username   string
+	EmployeeID string
 }
 
-// Create Request
-type CreateRequest struct {
-	Name       string    `json:"name"`
-	Type       string    `json:"type"`
-	Memo       string    `json:"memo"`
-	FileString string    `json:"fileString"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+// Create Menu Request
+type Menu struct {
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Memo       string `json:"memo"`
+	FileString string `json:"fileString"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
+	Opened     string `json:"opened"`
+}
+
+// Add Order Request
+type Order struct {
+	ID        int    `json:"id"`
+	MenuID    int    `json:"menuId"`
+	Name      string `json:"name"`
+	Type      string `json:"type"`
+	Item      string `json:"item"`
+	Sugar     string `json:"sugar"`
+	Ice       string `json:"ice"`
+	Price     string `json:"price"`
+	UserMemo  string `json:"memo"`
+	UpdatedAt string `json:"updated_at"`
+	User      string `json:"user"`
+	Count     string `json:"count"`
 }
