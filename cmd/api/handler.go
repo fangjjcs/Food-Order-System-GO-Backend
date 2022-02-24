@@ -1,12 +1,15 @@
 package main
 
 import (
-	"errors"
+	"backend/models"
+	"encoding/json"
 	"net/http"
-	"strconv"
-
-	"github.com/julienschmidt/httprouter"
+	"time"
 )
+
+type JsonResp struct {
+	OK bool `json:"ok"`
+}
 
 func (app *application) statusHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -24,41 +27,32 @@ func (app *application) statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *application) getOneMovie(w http.ResponseWriter, r *http.Request) {
-	params := httprouter.ParamsFromContext(r.Context())
-
-	id, err := strconv.Atoi(params.ByName("id"))
-	if err != nil {
-		app.logger.Print(errors.New("invalid id parameter"))
-		app.errorJSON(w, err, http.StatusBadRequest)
-		return
-	}
-
-	app.logger.Println("id is", id)
-
-	movie, err := app.models.DB.Get(id)
-	if err != nil {
-		app.logger.Println(err)
-		app.errorJSON(w, err, http.StatusBadRequest)
-		return
-	}
-
-	err = app.writeJSON(w, http.StatusOK, movie, "movie")
-	if err != nil {
-		app.logger.Println(err)
-		app.errorJSON(w, err, http.StatusBadRequest)
-		return
-	}
+type GetParser struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
-func (app *application) getAllMovies(w http.ResponseWriter, r *http.Request) {
-	movies, err := app.models.DB.All()
+func (app *application) getOneMenu(w http.ResponseWriter, r *http.Request) {
+
+	var parser GetParser
+	err := json.NewDecoder(r.Body).Decode(&parser)
 	if err != nil {
 		app.errorJSON(w, err, http.StatusBadRequest)
 		return
 	}
-	err = app.writeJSON(w, http.StatusOK, movies, "movies")
+
+	app.logger.Println("id is", parser.ID)
+
+	menu, err := app.models.DB.Get(parser.ID)
 	if err != nil {
+		app.logger.Println(err)
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, menu, "menu")
+	if err != nil {
+		app.logger.Println(err)
 		app.errorJSON(w, err, http.StatusBadRequest)
 		return
 	}
@@ -66,11 +60,7 @@ func (app *application) getAllMovies(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) testOK(w http.ResponseWriter, r *http.Request) {
 
-	type jsonResp struct {
-		OK bool `json:"ok"`
-	}
-
-	res := jsonResp{
+	res := JsonResp{
 		OK: true,
 	}
 
@@ -82,11 +72,8 @@ func (app *application) testOK(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) deleteMovie(w http.ResponseWriter, r *http.Request) {
-	type jsonResp struct {
-		OK bool `json:"ok"`
-	}
 
-	res := jsonResp{
+	res := JsonResp{
 		OK: true,
 	}
 
@@ -97,9 +84,238 @@ func (app *application) deleteMovie(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// func (app *application) insertMovie(w http.ResponseWriter, r *http.Request) {
-// }
-// func (app *application) updateMovie(w http.ResponseWriter, r *http.Request) {
-// }
-// func (app *application) searchMovie(w http.ResponseWriter, r *http.Request) {
-// }
+type CreateParser struct {
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Memo       string `json:"memo"`
+	FileString string `json:"fileString"`
+}
+
+func (app *application) createMenu(w http.ResponseWriter, r *http.Request) {
+
+	var parser CreateParser
+	err := json.NewDecoder(r.Body).Decode(&parser)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+	var request models.Menu
+	request.Name = parser.Name
+	request.Type = parser.Type
+	request.Memo = parser.Memo
+	request.FileString = parser.FileString
+	request.CreatedAt = time.Now().Format("2006-01-02")
+	request.UpdatedAt = time.Now().Format("2006-01-02")
+	request.Opened = "false"
+
+	err = app.models.DB.Create(request)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	res := JsonResp{
+		OK: true,
+	}
+
+	err = app.writeJSON(w, http.StatusOK, res, "response")
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+}
+
+func (app *application) getAllMenu(w http.ResponseWriter, r *http.Request) {
+	menu, err := app.models.DB.AllMenu()
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, menu, "menu")
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+}
+
+type UpdateParser struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+func (app *application) updateOpen(w http.ResponseWriter, r *http.Request) {
+	var parser UpdateParser
+	err := json.NewDecoder(r.Body).Decode(&parser)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+	err = app.models.DB.UpdateOpen(parser.ID, parser.Name)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	res := JsonResp{
+		OK: true,
+	}
+	err = app.writeJSON(w, http.StatusOK, res, "response")
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+}
+
+func (app *application) getOpenedMenu(w http.ResponseWriter, r *http.Request) {
+	menu, err := app.models.DB.OpenedMenu()
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, menu, "menu")
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+}
+
+func (app *application) addOrder(w http.ResponseWriter, r *http.Request) {
+	var order models.Order
+	err := json.NewDecoder(r.Body).Decode(&order)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+	order.UpdatedAt = time.Now().Format("2006-01-02")
+
+	err = app.models.DB.AddOrder(order)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	res := JsonResp{
+		OK: true,
+	}
+	err = app.writeJSON(w, http.StatusOK, res, "response")
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+}
+
+func (app *application) getAllOrder(w http.ResponseWriter, r *http.Request) {
+	orders, err := app.models.DB.AllOrder()
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, orders, "orders")
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+}
+
+func (app *application) updateOrder(w http.ResponseWriter, r *http.Request) {
+	var order models.Order
+	err := json.NewDecoder(r.Body).Decode(&order)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+	order.UpdatedAt = time.Now().Format("2006-01-02")
+
+	err = app.models.DB.UpdateOrder(order)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	res := JsonResp{
+		OK: true,
+	}
+	err = app.writeJSON(w, http.StatusOK, res, "response")
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+}
+
+func (app *application) updateMenu(w http.ResponseWriter, r *http.Request) {
+	var menu models.Menu
+	err := json.NewDecoder(r.Body).Decode(&menu)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+	menu.UpdatedAt = time.Now().Format("2006-01-02")
+
+	err = app.models.DB.UpdateMenu(menu)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	res := JsonResp{
+		OK: true,
+	}
+	err = app.writeJSON(w, http.StatusOK, res, "response")
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+}
+
+func (app *application) deleteOpenMenu(w http.ResponseWriter, r *http.Request) {
+
+	var parser GetParser
+	err := json.NewDecoder(r.Body).Decode(&parser)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	err = app.models.DB.DeleteOpenMenu(parser.ID)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	res := JsonResp{
+		OK: true,
+	}
+	err = app.writeJSON(w, http.StatusOK, res, "response")
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+}
+
+func (app *application) deleteOrder(w http.ResponseWriter, r *http.Request) {
+
+	var order models.Order
+	err := json.NewDecoder(r.Body).Decode(&order)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	err = app.models.DB.DeleteOrder(order.ID)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	res := JsonResp{
+		OK: true,
+	}
+	err = app.writeJSON(w, http.StatusOK, res, "response")
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+}
