@@ -25,14 +25,32 @@ type User struct {
 
 // Create Menu Request
 type Menu struct {
-	ID         int    `json:"id"`
-	Name       string `json:"name"`
-	Type       string `json:"type"`
-	Memo       string `json:"memo"`
-	FileString string `json:"fileString"`
-	CreatedAt  string `json:"created_at"`
-	UpdatedAt  string `json:"updated_at"`
-	Opened     string `json:"opened"`
+	ID              int     `json:"id"`
+	Name            string  `json:"name"`
+	Type            string  `json:"type"`
+	Memo            string  `json:"memo"`
+	FileString      string  `json:"fileString"`
+	CreatedAt       string  `json:"createdAt"`
+	UpdatedAt       string  `json:"updatedAt"`
+	Opened          bool    `json:"opened"`
+	Rating          float64 `json:"rating"`
+	TotalVoter      int     `json:"totalVoter"`
+	OrderCount      int     `json:"orderCount"`
+	OrderTotalPrice int     `json:"orderTotalPrice"`
+}
+
+type OpenedMenu struct {
+	ID              int    `json:"id"`
+	Name            string `json:"name"`
+	Type            string `json:"type"`
+	Memo            string `json:"memo"`
+	FileString      string `json:"fileString"`
+	CreatedAt       string `json:"createdAt"`
+	UpdatedAt       string `json:"updatedAt"`
+	CloseAt         string `json:"closeAt"`
+	Opened          bool   `json:"opened"`
+	OrderCount      int    `json:"orderCount"`
+	OrderTotalPrice int    `json:"orderTotalPrice"`
 }
 
 // Add Order Request
@@ -46,7 +64,13 @@ type Order struct {
 	Ice       string `json:"ice"`
 	Price     string `json:"price"`
 	UserMemo  string `json:"memo"`
-	UpdatedAt string `json:"updated_at"`
+	UpdatedAt string `json:"updatedAt"`
 	User      string `json:"user"`
 	Count     string `json:"count"`
+}
+
+type Rating struct {
+	ID         int     `json:"id"`
+	Rating     float64 `json:"rating"`
+	TotalVoter int     `json:"totalVoter"`
 }

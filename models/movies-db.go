@@ -95,7 +95,13 @@ func (m *DBModel) AllMenu() ([]*Menu, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	query := `select * from menu
+	query := `select m.id, m.name, m.type, m.memo, m.image,m.created_at, m.updated_at, 
+	m.opened, COALESCE(m.rating, 0.0), COALESCE(m.total_voter, 0), 
+	COUNT(orders.menu_id) AS order_count,
+	SUM(COALESCE(CAST(orders.price AS INTEGER), 0)) AS order_total_price
+	from menu m 
+	left join orders on orders.menu_id = m.id
+	group by m.id
 	`
 
 	rows, err := m.DB.QueryContext(ctx, query)
@@ -116,6 +122,10 @@ func (m *DBModel) AllMenu() ([]*Menu, error) {
 			&menu.CreatedAt,
 			&menu.UpdatedAt,
 			&menu.Opened,
+			&menu.Rating,
+			&menu.TotalVoter,
+			&menu.OrderCount,
+			&menu.OrderTotalPrice,
 		)
 		if err != nil {
 			return nil, err
@@ -126,28 +136,35 @@ func (m *DBModel) AllMenu() ([]*Menu, error) {
 	return menus, nil
 }
 
-func (m *DBModel) UpdateOpen(id int, name string) error {
+func (m *DBModel) UpdateOpen(id int, name string, closeAt string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	var time = time.Now().Format("2006-01-02")
-	stmt := `update menu set opened = 'true', updated_at = $1 where id = $2 and name = $3
+	stmt := `update menu set opened = true, updated_at = $1, close_at = $2 where id = $3 and name = $4
 	`
-	_, err := m.DB.ExecContext(ctx, stmt, time, id, name)
+	_, err := m.DB.ExecContext(ctx, stmt, time, closeAt, id, name)
 	if err != nil {
 		return err
 	}
 
+	log.Println("open", id, name, closeAt)
 	return nil
 }
 
-func (m *DBModel) OpenedMenu() ([]*Menu, error) {
+func (m *DBModel) OpenedMenu() ([]*OpenedMenu, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	var time = time.Now().Format("2006-01-02")
-	log.Println(time)
-	query := `select * from menu where opened = 'true' and updated_at = $1
+	query := `select 
+		m.id, m.name, m.type, m.memo, m.image,m.created_at, m.updated_at, COALESCE(m.close_at, ''), m.opened, 
+		SUM(COALESCE(CAST(orders.count AS INTEGER), 0)) AS order_count,
+		SUM(COALESCE(CAST(orders.price AS INTEGER), 0)) AS order_total_price
+		from menu m
+		left join orders on orders.menu_id = m.id and orders.updated_at = $1
+		where m.opened = true and m.updated_at = $1
+		group by m.id
 	`
 	rows, err := m.DB.QueryContext(ctx, query, time)
 	if err != nil {
@@ -155,9 +172,9 @@ func (m *DBModel) OpenedMenu() ([]*Menu, error) {
 	}
 	defer rows.Close()
 
-	var menus []*Menu
+	var menus []*OpenedMenu
 	for rows.Next() {
-		var menu Menu
+		var menu OpenedMenu
 		err := rows.Scan(
 			&menu.ID,
 			&menu.Name,
@@ -166,7 +183,10 @@ func (m *DBModel) OpenedMenu() ([]*Menu, error) {
 			&menu.FileString,
 			&menu.CreatedAt,
 			&menu.UpdatedAt,
+			&menu.CloseAt,
 			&menu.Opened,
+			&menu.OrderCount,
+			&menu.OrderTotalPrice,
 		)
 		if err != nil {
 			return nil, err
@@ -279,7 +299,7 @@ func (m *DBModel) UpdateMenu(menu Menu) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	stmt := `update menu set name = $2, type = $3, memo = $4, image = $5, updated_at = $6, opened=false where id = $1
+	stmt := `update menu set name = $2, type = $3, memo = $4, image = $5, updated_at = $6 where id = $1
 	`
 	_, err := m.DB.ExecContext(ctx, stmt,
 		menu.ID,
@@ -328,4 +348,81 @@ func (m *DBModel) DeleteOrder(id int) error {
 	}
 
 	return nil
+}
+
+func (m *DBModel) UpdateMenuRating(id int, score float64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	selectStmt := `select id, COALESCE(rating, 0), COALESCE(total_voter,0) from menu where id = $1`
+	row := m.DB.QueryRowContext(ctx, selectStmt, id)
+
+	var rating Rating
+
+	err := row.Scan(
+		&rating.ID,
+		&rating.Rating,
+		&rating.TotalVoter,
+	)
+	if err != nil {
+		return err
+	}
+
+	newTotalVoter := rating.TotalVoter + 1
+	newRating := (rating.Rating*float64(rating.TotalVoter) + score) / float64(newTotalVoter)
+
+	updateStmt := `update menu set rating = $1, total_voter = $2 where id = $3
+	`
+	_, err = m.DB.ExecContext(ctx, updateStmt, newRating, newTotalVoter, id)
+
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+func (m *DBModel) GetOrderById(id int) ([]*Order, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var time = time.Now().Format("2006-01-02")
+	query := `select o.id, o.menu_id, o.name, o.type, o.item, o.sugar, o.ice, o.price, o.user_memo, o.updated_at, o.user_name, o.count from orders o
+		left join menu m
+		ON m.id = o.menu_id and m.opened = true
+		where o.updated_at = $1
+		and o.menu_id = $2
+	`
+
+	rows, err := m.DB.QueryContext(ctx, query, time, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []*Order
+	for rows.Next() {
+		var order Order
+		err := rows.Scan(
+			&order.ID,
+			&order.MenuID,
+			&order.Name,
+			&order.Type,
+			&order.Item,
+			&order.Sugar,
+			&order.Ice,
+			&order.Price,
+			&order.UserMemo,
+			&order.UpdatedAt,
+			&order.User,
+			&order.Count,
+		)
+		if err != nil {
+			return nil, err
+		}
+		orders = append(orders, &order)
+	}
+
+	return orders, nil
 }
