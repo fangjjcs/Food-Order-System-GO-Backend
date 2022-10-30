@@ -1,4 +1,3 @@
-# Working-with-React-and-GO-backend
+# Food Order System ( GO Backend )
 
 ![architecture](./architecture.svg)
-
