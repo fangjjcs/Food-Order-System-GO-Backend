@@ -1,4 +1,3 @@
 # Food Order System ( GO Backend )
 
-### Run The Backend
-`./start.sh`
+![architecture](./architecture.svg)
