@@ -29,6 +29,8 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPost, "/get-all-menu", app.getAllMenu)
 	router.HandlerFunc(http.MethodPost, "/get-opened-menu", app.getOpenedMenu)
 	router.HandlerFunc(http.MethodPost, "/get-all-order", app.getAllOrder)
+	router.HandlerFunc(http.MethodPost, "/get-order", app.getOrderById)
+
 	router.POST("/create", app.wrap(secure.ThenFunc(app.createMenu)))
 	router.POST("/update-open", app.wrap(secure.ThenFunc(app.updateOpen)))
 	router.POST("/add-order", app.wrap(secure.ThenFunc(app.addOrder)))
@@ -37,6 +39,7 @@ func (app *application) routes() http.Handler {
 	router.POST("/update-menu", app.wrap(secure.ThenFunc(app.updateMenu)))
 	router.POST("/delete-open-menu", app.wrap(secure.ThenFunc(app.deleteOpenMenu)))
 	router.POST("/delete-order", app.wrap(secure.ThenFunc(app.deleteOrder)))
+	router.POST("/update-rating", app.wrap(secure.ThenFunc(app.updateMenuRating)))
 
 	return app.enableCORS(router)
 
