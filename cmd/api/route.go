@@ -21,10 +21,8 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPost, "/v1/signin", app.Signin)
 
 	router.HandlerFunc(http.MethodGet, "/status", app.statusHandler)
-	// router.HandlerFunc(http.MethodPost, "/get-menu/:id", app.getOneMenu)
+	// router.HandlerFunc(http.MethodPost, "/get-id-menu", app.getOneMenu)
 	router.HandlerFunc(http.MethodGet, "/test-ok", app.testOK)
-
-	router.POST("/admin/delete-movie", app.wrap(secure.ThenFunc(app.deleteMovie)))
 
 	router.HandlerFunc(http.MethodPost, "/get-all-menu", app.getAllMenu)
 	router.HandlerFunc(http.MethodPost, "/get-opened-menu", app.getOpenedMenu)

@@ -38,32 +38,50 @@ func (m *DBModel) CheckUserWithNumber(employee string) (*User, error) {
 }
 
 // Get returns one movie and error, if any
-func (m *DBModel) Get(id int) (*Menu, error) {
+func (m *DBModel) Get(id int) ([]*Menu, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	query := `select * from menu where id = $1 
+	query := `select m.id, m.name, m.type, m.memo, m.image,m.created_at, m.updated_at, 
+	m.opened, COALESCE(m.rating, 0.0), COALESCE(m.total_voter, 0), 
+	COUNT(orders.menu_id) AS order_count,
+	SUM(COALESCE(CAST(orders.price AS INTEGER), 0)) AS order_total_price
+	from menu m 
+	left join orders on orders.menu_id = m.id
+	where m.id = $1
+	group by m.id
 	`
 
-	row := m.DB.QueryRowContext(ctx, query, id)
-
-	var menu Menu
-
-	err := row.Scan(
-		&menu.ID,
-		&menu.Name,
-		&menu.Type,
-		&menu.Memo,
-		&menu.FileString,
-		&menu.CreatedAt,
-		&menu.UpdatedAt,
-		&menu.Opened,
-	)
+	rows, err := m.DB.QueryContext(ctx, query, id)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	return &menu, nil
+	var menus []*Menu
+	for rows.Next() {
+		var menu Menu
+		err := rows.Scan(
+			&menu.ID,
+			&menu.Name,
+			&menu.Type,
+			&menu.Memo,
+			&menu.FileString,
+			&menu.CreatedAt,
+			&menu.UpdatedAt,
+			&menu.Opened,
+			&menu.Rating,
+			&menu.TotalVoter,
+			&menu.OrderCount,
+			&menu.OrderTotalPrice,
+		)
+		if err != nil {
+			return nil, err
+		}
+		menus = append(menus, &menu)
+	}
+
+	return menus, nil
 }
 
 func (m *DBModel) Create(newMenu Menu) error {
@@ -159,8 +177,8 @@ func (m *DBModel) OpenedMenu() ([]*OpenedMenu, error) {
 	var time = time.Now().Format("2006-01-02")
 	query := `select 
 		m.id, m.name, m.type, m.memo, m.image,m.created_at, m.updated_at, COALESCE(m.close_at, ''), m.opened, 
-		SUM(COALESCE(CAST(orders.count AS INTEGER), 0)) AS order_count,
-		SUM(COALESCE(CAST(orders.price AS INTEGER), 0)) AS order_total_price
+		SUM(COALESCE(orders.count, 0)) AS order_count,
+		SUM(COALESCE(orders.price, 0)) AS order_total_price
 		from menu m
 		left join orders on orders.menu_id = m.id and orders.updated_at = $1
 		where m.opened = true and m.updated_at = $1
@@ -388,7 +406,7 @@ func (m *DBModel) GetOrderById(id int) ([]*Order, error) {
 	defer cancel()
 
 	var time = time.Now().Format("2006-01-02")
-	query := `select o.id, o.menu_id, o.name, o.type, o.item, o.sugar, o.ice, o.price, o.user_memo, o.updated_at, o.user_name, o.count from orders o
+	query := `select o.id, o.menu_id, o.name, o.type, o.item, o.sugar, o.ice, COALESCE(o.price,0), o.user_memo, o.updated_at, o.user_name, COALESCE(o.count,0) from orders o
 		left join menu m
 		ON m.id = o.menu_id and m.opened = true
 		where o.updated_at = $1
