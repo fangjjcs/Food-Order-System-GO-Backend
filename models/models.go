@@ -62,11 +62,11 @@ type Order struct {
 	Item      string `json:"item"`
 	Sugar     string `json:"sugar"`
 	Ice       string `json:"ice"`
-	Price     string `json:"price"`
+	Price     int    `json:"price"`
 	UserMemo  string `json:"memo"`
 	UpdatedAt string `json:"updatedAt"`
 	User      string `json:"user"`
-	Count     string `json:"count"`
+	Count     int    `json:"count"`
 }
 
 type Rating struct {

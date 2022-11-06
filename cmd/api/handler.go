@@ -3,6 +3,7 @@ package main
 import (
 	"backend/models"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 )
@@ -41,7 +42,7 @@ func (app *application) getOneMenu(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.logger.Println("id is", parser.ID)
+	log.Println("Menu", parser.ID)
 
 	menu, err := app.models.DB.Get(parser.ID)
 	if err != nil {
@@ -59,19 +60,6 @@ func (app *application) getOneMenu(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) testOK(w http.ResponseWriter, r *http.Request) {
-
-	res := JsonResp{
-		OK: true,
-	}
-
-	err := app.writeJSON(w, http.StatusOK, res, "response")
-	if err != nil {
-		app.errorJSON(w, err, http.StatusBadRequest)
-		return
-	}
-}
-
-func (app *application) deleteMovie(w http.ResponseWriter, r *http.Request) {
 
 	res := JsonResp{
 		OK: true,
